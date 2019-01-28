@@ -1,21 +1,39 @@
-
-# K / 4 = tangent at 0
-# L / 4 = tangent at 0
-
-# (K * L) / 4 = tangent at 0
+"""
+All measurements in mm / MPa / Joules / Kilograms
+"""
 import math
+from scipy import integrate
+
+import numpy as np
 
 
 def logistic(x, L, k, x0, y0):
     return L / (1 + math.e ** (-k*(x-x0))) + y0 - L / 2
 
+def logit(x, L, k, x0, y0):
+    try:
+        return -L*math.log((1 / (k * (x-x0+1/(2*k)))) - 1) + y0
+    except Exception as e:
+        pass
+        # print(x, (1 / (k * (x-x0+.5-k))) - 1,  e)
+
+def logitprime(x, L, k, x0, y0):
+    return -(4*k*L)/(-1 + 4*k**2*(x - x0)**2)
+
+
 def compose(slope, tan_x, asymptote):
     func1 = lambda x: x * slope
     tan_y = tan_x * slope
-    L = asymptote - tan_y
-    k = (slope * 4) / L
-    func2 = lambda x: logistic(x, L, k, tan_x, tan_y)
-    return lambda x: func1(x) if x < tan_x else func2(x)
+    k = 1 / (2 * (asymptote - tan_x))
+    L = slope / (4 * k)
+    func2 = lambda x: logit(x, L, k, tan_x, tan_y)
+    print(logitprime(tan_x, L, k, tan_x, tan_y))
+    print(k, L, tan_x, tan_y)
+    elastic_energy = func1(tan_x) * tan_x / 2
+    print(elastic_energy, integrate.quad(func1, 0, tan_x))
+    break_energy = integrate.quad(func2, tan_x, asymptote)[0] + elastic_energy
+
+    return lambda x: func1(x) if x < tan_x else func2(x), elastic_energy, break_energy
 
 class Sword_Low_Carbon:
     tensile_ult = 766
@@ -29,53 +47,123 @@ class Sword_High_Carbon:
     tensile_ult = 1010
     tensile_yield = 810
 
+class Sword:
+    thickness = 2.6
+    width = 48.5
+    length = 886
+    tensile_ult = 766 * 1000000
+    tensile_yield = 572 * 1000000
+    shear_yield = tensile_yield / 2
+    shear_ult = tensile_ult / 2
+    mod_of_elasticity = 202000 * 1000000
+    shear_modulus = 79500 * 1000000
+    mass = 1.182
+    strain_at_fracture = .2
 
-def logit(x, L, k, x0, y0):
-    try:
-        return -math.log(L / (k * (x - x0)) - 1) + y0
-    except Exception:
-        print(x)
+    def __init__(self):
+        self.tensile_stress_strain, self.tensile_elastic_limit, self.tensile_plastic_limit = self.calc_stress_strain(self.mod_of_elasticity, self.tensile_yield, self.tensile_ult, self.strain_at_fracture)
+        self.shear_stress_strain, self.shear_elastic_limit, self.shear_plastic_limit = self.calc_stress_strain(self.shear_modulus, self.shear_yield, self.shear_ult, self.strain_at_fracture)
+
+    def calc_stress_strain(self, slope, tan_y, asymptote, break_point):
+        func1 = lambda x: x * slope
+        tan_x = tan_y / slope
+        L = (asymptote - tan_y) * 2
+        k = (slope * 4) / L
+        func2 = lambda x: logistic(x, L, k, tan_x, tan_y)
+        elastic_energy = func1(tan_x) * tan_x / 2
+        break_energy = integrate.quad(func2, tan_x, break_point)[0] + elastic_energy
+
+        def comp(x):
+            if x < tan_x:
+                return func1(x)
+            elif tan_x < x < break_point:
+                return func2(x)
+            else:
+                return 0
+
+        return comp, elastic_energy, break_energy
+
+    def calc_damage(self, other, KE, volume):
+        pl = other.shear_plastic_limit * volume
+        el = other.shear_elastic_limit * volume
+
+        print(KE, el, pl)
+
+        if KE > pl:
+            print('Pierced')
+        elif KE > el:
+            print('Bent')
+            for s in np.linspace(0, other.strain_at_fracture, 100, endpoint=False):
+                if integrate.quad(other.shear_stress_strain, 0, s)[0] * volume > KE:
+                    print(s)
+                    break
+        else:
+            print('Deflected')
+
+    def slash(self, other, velocity):
+        KE = .5 * self.mass * velocity ** 2
+        volume = 2 * (self.thickness * min(self.length, other.width) * other.thickness) / 1000 ** 3
+        # volume = (self.thickness * self.length * other.thickness) / 1000 ** 3
+        area = min(self.length, other.width) * self.thickness
+
+        self.calc_damage(other, KE, area)
+        other.calc_damage(other, KE, area)
+
+    def stab(self, other, velocity):
+        KE = .5 * self.mass * velocity ** 2
+        volume = 2 * (self.thickness * min(self.width, other.width) * other.thickness) / 1000 ** 3
+        # volume = (self.thickness * self.length * other.thickness) / 1000 ** 3
+
+        self.attack(other, KE, volume)
 
 
-# def logit(x, L, k, x0, y0):
-#     try:
-#         return (x * x0 - math.log(-1 + L/(k + L/2 - y0)))/x
-#     except Exception:
-#         print(x)
 
-def logitprime(x, L, k, x0, y0):
-    return L / ((x - x0) * (L + k * (-x + x0)))
+class Breastplate:
+    thickness = 3
+    width = 500
+    length = 700
+    tensile_ult = 766 * 1000000
+    tensile_yield = 572 * 1000000
+    shear_yield = tensile_yield / 2
+    shear_ult = tensile_ult / 2
+    mod_of_elasticity = 1202000 * 1000000
+    shear_modulus = 79500 * 1000000
+    strain_at_fracture = .2
+
+    def __init__(self):
+        self.tensile_stress_strain, self.tensile_elastic_limit, self.tensile_plastic_limit = self.calc_stress_strain(
+            self.mod_of_elasticity, self.tensile_yield, self.tensile_ult, self.strain_at_fracture)
+        self.shear_stress_strain, self.shear_elastic_limit, self.shear_plastic_limit = self.calc_stress_strain(
+            self.shear_modulus, self.shear_yield, self.shear_ult, self.strain_at_fracture)
+
+    def calc_stress_strain(self, slope, tan_y, asymptote, break_point):
+        func1 = lambda x: x * slope
+        tan_x = tan_y / slope
+        L = (asymptote - tan_y) * 2
+        k = (slope * 4) / L
+        func2 = lambda x: logistic(x, L, k, tan_x, tan_y)
+        elastic_energy = func1(tan_x) * tan_x / 2
+        break_energy = integrate.quad(func2, tan_x, break_point)[0] + elastic_energy
+
+        def comp(x):
+            if x < tan_x:
+                return func1(x)
+            elif tan_x < x < break_point:
+                return func2(x)
+            else:
+                return 0
+
+        return comp, elastic_energy, break_energy
+
+s = Sword()
+bp = Breastplate()
+
+s.stab(bp, 6)
 
 
-#     return L / (1 + math.e ** (-k*(x-x0))) + y0 - L / 2
+First compare yield strength to elastic limit and then to plastic limit of weapon to armor if it is lower then it can
+never cause damage.
 
-x0 = 0
-y0 = 0
-step = .001
-# plt.plot(np.arange(xmin, xmax, step), [logit(x, L=1, k=1, x0=0, y0=0) for x in np.arange(xmin, xmax, step)])
-plt.plot(np.arange(x0, x0 + 1, step), [logit(x, L=1, k=1, x0=0, y0=0) for x in np.arange(x0, x0 + 1, step)])
+Then calculate damage to weapon then damage to armor
 
-plt.show()
-logitprime(.5, L=1, k=128, x0=0, y0=0)
 
-def compose(slope, tan_x, asymptote):
-    func1 = lambda x: x * slope
-    tan_y = tan_x * slope
-    L = asymptote - tan_y
-    k = (L * 4) / slope
-    func2 = lambda x: logit(x, L, k, tan_x, tan_y)
-    return lambda x: func1(x) if x < tan_x else func2(x)
-
-def compose(slope, tan_x, asymptote):
-    func1 = lambda x: x * slope
-    tan_y = tan_x * slope
-    L = asymptote - tan_y
-    k = (L * 4) / slope
-    func2 = lambda x: logit(x, L, k, tan_x, tan_y)
-    return lambda x: func1(x) if x < tan_x else func2(x)
-xmin = 0.1
-xmax = 9.9
-step = .1
-comp = compose(1, 4, 9.9)
-plt.plot(np.arange(xmin, xmax, step), [comp(x) for x in np.arange(xmin, xmax, step)])
-plt.show()
