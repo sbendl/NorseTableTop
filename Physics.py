@@ -83,9 +83,10 @@ class Sword:
 
         return comp, elastic_energy, break_energy
 
-    def calc_damage(self, other, KE, volume):
-        pl = other.shear_plastic_limit * volume
-        el = other.shear_elastic_limit * volume
+    def calc_damage(self, KE, volume):
+        print("weapon:")
+        pl = self.shear_plastic_limit * volume
+        el = self.shear_elastic_limit * volume
 
         print(KE, el, pl)
 
@@ -93,8 +94,8 @@ class Sword:
             print('Pierced')
         elif KE > el:
             print('Bent')
-            for s in np.linspace(0, other.strain_at_fracture, 100, endpoint=False):
-                if integrate.quad(other.shear_stress_strain, 0, s)[0] * volume > KE:
+            for s in np.linspace(0, self.strain_at_fracture, 100, endpoint=False):
+                if integrate.quad(self.shear_stress_strain, 0, s)[0] * volume > KE:
                     print(s)
                     break
         else:
@@ -104,17 +105,22 @@ class Sword:
         KE = .5 * self.mass * velocity ** 2
         volume = 2 * (self.thickness * min(self.length, other.width) * other.thickness) / 1000 ** 3
         # volume = (self.thickness * self.length * other.thickness) / 1000 ** 3
-        area = min(self.length, other.width) * self.thickness
+        cut_length = min(self.length, other.width, other.length)
+        volume_other = (cut_length * other.thickness * self.thickness) / 1000**3
+        volume_self = (self.thickness * self.width * self.length) / 1000**3
 
-        self.calc_damage(other, KE, area)
-        other.calc_damage(other, KE, area)
+
+        self.calc_damage(KE, volume_self)
+        other.calc_damage(KE, volume_other)
 
     def stab(self, other, velocity):
         KE = .5 * self.mass * velocity ** 2
         volume = 2 * (self.thickness * min(self.width, other.width) * other.thickness) / 1000 ** 3
         # volume = (self.thickness * self.length * other.thickness) / 1000 ** 3
+        area = min(self.width, other.width, other.length) * self.thickness
 
-        self.attack(other, KE, volume)
+        self.calc_damage(KE, 8 * (area * self.length) / 1000 ** 3)
+        other.calc_damage(KE, 8 * (area * other.thickness) / 1000 ** 3)
 
 
 
@@ -155,15 +161,33 @@ class Breastplate:
 
         return comp, elastic_energy, break_energy
 
+    def calc_damage(self, KE, volume):
+        print("armour:")
+        pl = self.shear_plastic_limit * volume
+        el = self.shear_elastic_limit * volume
+
+        print(KE, el, pl)
+
+        if KE > pl:
+            print('Pierced')
+        elif KE > el:
+            print('Bent')
+            for s in np.linspace(0, self.strain_at_fracture, 100, endpoint=False):
+                if integrate.quad(self.shear_stress_strain, 0, s)[0] * volume > KE:
+                    print(s)
+                    break
+        else:
+            print('Deflected')
+
 s = Sword()
 bp = Breastplate()
 
-s.stab(bp, 6)
+s.slash(bp, 20)
 
 
-First compare yield strength to elastic limit and then to plastic limit of weapon to armor if it is lower then it can
-never cause damage.
-
-Then calculate damage to weapon then damage to armor
-
+# First compare yield strength to elastic limit and then to plastic limit of weapon to armor if it is lower then it can
+# never cause damage.
+#
+# Then calculate damage to weapon then damage to armor
+#
 
