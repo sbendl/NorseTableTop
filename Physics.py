@@ -51,8 +51,8 @@ class Sword:
     thickness = 2.6
     width = 48.5
     length = 886
-    tensile_ult = 130 * 1000000
-    tensile_yield = 11 00 * 1000000
+    tensile_ult = 766 * 1000000
+    tensile_yield = 572 * 1000000
     shear_yield = tensile_yield * .566
     shear_ult = tensile_ult * .566
     mod_of_elasticity = 202000 * 1000000
@@ -60,7 +60,8 @@ class Sword:
     mass = 1.182
     strain_at_fracture = .2
 
-    def __init__(self):
+    def __init__(self, wielder):
+        self.wielder = wielder
         self.tensile_stress_strain, self.tensile_elastic_limit, self.tensile_plastic_limit = self.calc_stress_strain(self.mod_of_elasticity, self.tensile_yield, self.tensile_ult, self.strain_at_fracture)
         self.shear_stress_strain, self.shear_elastic_limit, self.shear_plastic_limit = self.calc_stress_strain(self.shear_modulus, self.shear_yield, self.shear_ult, self.strain_at_fracture)
 
@@ -94,24 +95,29 @@ class Sword:
             print('Pierced')
         elif KE > el:
             print('Bent')
-            for s in np.linspace(0, self.strain_at_fracture, 100, endpoint=False):
+            for s in np.linspace(0, self.strain_at_fracture, 250, endpoint=False):
                 if integrate.quad(self.shear_stress_strain, 0, s)[0] * volume > KE:
                     print(s)
                     break
         else:
             print('Deflected')
 
-    def slash(self, other, velocity):
-        KE = .5 * self.mass * velocity ** 2
+    def slash(self, other, ang_velocity):
+        cut_length = min(self.length, other.width, other.length)
+        tip_velocity = ang_velocity * (self.wielder.elbow_len + self.length) / 1000
+        bottom_velocity = ang_velocity * (self.wielder.elbow_len + (self.length * 2 / 3) - cut_length) / 1000
+        print(tip_velocity, bottom_velocity)
+        KE_self = .5 * (self.mass/2) * bottom_velocity ** 2
+        KE_other = .5 * self.mass * tip_velocity ** 2
         volume = 2 * (self.thickness * min(self.length, other.width) * other.thickness) / 1000 ** 3
         # volume = (self.thickness * self.length * other.thickness) / 1000 ** 3
-        cut_length = min(self.length, other.width, other.length)
-        volume_other = (cut_length * other.thickness * self.thickness) / 1000**3
+
+        volume_other = (cut_length * other.thickness * self.thickness + (3*2*cut_length)) / 1000**3
         volume_self = (self.thickness * self.width * self.length) / 1000**3
 
 
-        self.calc_damage(KE, volume_self)
-        other.calc_damage(KE, volume_other)
+        self.calc_damage(KE_self, volume_self)
+        other.calc_damage(KE_other, volume_other)
 
     def stab(self, other, velocity):
         KE = .5 * self.mass * velocity ** 2
@@ -125,13 +131,13 @@ class Sword:
 
 
 class Breastplate:
-    thickness = 3
+    thickness = 4.5
     width = 500
     length = 700
     tensile_ult = 766 * 1000000
     tensile_yield = 572 * 1000000
-    shear_yield = tensile_yield / 2
-    shear_ult = tensile_ult / 2
+    shear_yield = tensile_yield * .566
+    shear_ult = tensile_ult * .566
     mod_of_elasticity = 1202000 * 1000000
     shear_modulus = 79500 * 1000000
     strain_at_fracture = .2
@@ -179,10 +185,14 @@ class Breastplate:
         else:
             print('Deflected')
 
-s = Sword()
+class Human:
+    elbow_len = 460
+
+h = Human()
+s = Sword(h)
 bp = Breastplate()
 
-s.slash(bp, 20)
+s.slash(bp, 26)
 
 
 # First compare yield strength to elastic limit and then to plastic limit of weapon to armor if it is lower then it can
