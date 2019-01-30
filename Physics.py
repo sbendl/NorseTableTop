@@ -127,7 +127,7 @@ class Sword:
         print(KE, el, pl)
 
         if KE > pl:
-            print('Pierced')
+            print('Broken')
         elif KE > el:
             print('Bent')
             for s in np.linspace(0, self.material.strain_at_fracture, 250, endpoint=False):
