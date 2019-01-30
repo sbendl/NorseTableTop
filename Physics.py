@@ -35,37 +35,25 @@ def compose(slope, tan_x, asymptote):
 
     return lambda x: func1(x) if x < tan_x else func2(x), elastic_energy, break_energy
 
-class Sword_Low_Carbon:
-    tensile_ult = 766
-    tensile_yield = 572
+class Material:
+    tensile_ult = None
+    tensile_yield = None
+    shear_yield = None
+    shear_ult = None
+    mod_of_elasticity = None
+    shear_modulus = None
+    strain_at_fracture = None
 
-class Sword_Med_Carbon:
-    tensile_ult = 987
-    tensile_yield = 685
+    def __init__(self):
+        self.tensile_stress_strain, self.tensile_elastic_limit, self.tensile_plastic_limit = self.calc_stress_strain(
+            self.mod_of_elasticity, self.tensile_yield, self.tensile_ult,
+            self.strain_at_fracture)
+        self.shear_stress_strain, self.shear_elastic_limit, self.shear_plastic_limit = self.calc_stress_strain(
+            self.shear_modulus, self.shear_yield, self.shear_ult,
+            self.strain_at_fracture)
 
-class Sword_High_Carbon:
-    tensile_ult = 1010
-    tensile_yield = 810
-
-class Sword:
-    thickness = 2.6
-    width = 48.5
-    length = 886
-    tensile_ult = 766 * 1000000
-    tensile_yield = 572 * 1000000
-    shear_yield = tensile_yield * .566
-    shear_ult = tensile_ult * .566
-    mod_of_elasticity = 202000 * 1000000
-    shear_modulus = 80000 * 1000000
-    mass = 1.182
-    strain_at_fracture = .2
-
-    def __init__(self, wielder):
-        self.wielder = wielder
-        self.tensile_stress_strain, self.tensile_elastic_limit, self.tensile_plastic_limit = self.calc_stress_strain(self.mod_of_elasticity, self.tensile_yield, self.tensile_ult, self.strain_at_fracture)
-        self.shear_stress_strain, self.shear_elastic_limit, self.shear_plastic_limit = self.calc_stress_strain(self.shear_modulus, self.shear_yield, self.shear_ult, self.strain_at_fracture)
-
-    def calc_stress_strain(self, slope, tan_y, asymptote, break_point):
+    @staticmethod
+    def calc_stress_strain(slope, tan_y, asymptote, break_point):
         func1 = lambda x: x * slope
         tan_x = tan_y / slope
         L = (asymptote - tan_y) * 2
@@ -84,10 +72,57 @@ class Sword:
 
         return comp, elastic_energy, break_energy
 
-    def calc_damage(self, KE, volume):
+class Low_Carbon(Material):
+    tensile_ult = 766 * 1e6
+    tensile_yield = 572 * 1e6
+    shear_yield = tensile_yield * .566
+    shear_ult = tensile_ult * .566
+    mod_of_elasticity = 202 * 1000 * 1e6
+    shear_modulus = 79.5 * 1000 * 1e6
+    strain_at_fracture = .202
+
+    def __init__(self):
+        super().__init__()
+
+class Med_Carbon(Material):
+    tensile_ult = 987 * 1e6
+    tensile_yield = 685 * 1e6
+    shear_yield = tensile_yield * .566
+    shear_ult = tensile_ult * .566
+    mod_of_elasticity = 203 * 1000 * 1e6
+    shear_modulus = 79.6 * 1000 * 1e6
+    strain_at_fracture = .189
+
+    def __init__(self):
+        super().__init__()
+
+class High_Carbon(Material):
+    tensile_ult = 1010 * 1e6
+    tensile_yield = 810 * 1e6
+    shear_yield = tensile_yield * .566
+    shear_ult = tensile_ult * .566
+    mod_of_elasticity = 198 * 1000 * 1e6
+    shear_modulus = 79.9 * 1000 * 1e6
+    strain_at_fracture = .146
+
+    def __init__(self):
+        super().__init__()
+
+class Sword:
+    thickness = 2.6 / 1000
+    width = 48.5 / 1000
+    length = 886 / 1000
+    mass = 1.182
+
+    def __init__(self, wielder, material):
+        self.wielder = wielder
+        self.material = material
+
+    def calc_damage(self, KE, other):
         print("weapon:")
-        pl = self.shear_plastic_limit * volume
-        el = self.shear_elastic_limit * volume
+        volume = self.width * self.thickness * self.length
+        pl = self.material.shear_plastic_limit * volume
+        el = self.material.shear_elastic_limit * volume
 
         print(KE, el, pl)
 
@@ -95,8 +130,8 @@ class Sword:
             print('Pierced')
         elif KE > el:
             print('Bent')
-            for s in np.linspace(0, self.strain_at_fracture, 250, endpoint=False):
-                if integrate.quad(self.shear_stress_strain, 0, s)[0] * volume > KE:
+            for s in np.linspace(0, self.material.strain_at_fracture, 250, endpoint=False):
+                if integrate.quad(self.material.shear_stress_strain, 0, s)[0] * volume > KE:
                     print(s)
                     break
         else:
@@ -104,73 +139,46 @@ class Sword:
 
     def slash(self, other, ang_velocity):
         cut_length = min(self.length, other.width, other.length)
-        tip_velocity = ang_velocity * (self.wielder.elbow_len + self.length) / 1000
-        bottom_velocity = ang_velocity * (self.wielder.elbow_len + (self.length * 2 / 3) - cut_length) / 1000
+        tip_velocity = ang_velocity * (self.wielder.elbow_len + self.length)
+        bottom_velocity = ang_velocity * (self.wielder.elbow_len + (self.length * 2 / 3) - cut_length)
         print(tip_velocity, bottom_velocity)
         KE_self = .5 * (self.mass/2) * bottom_velocity ** 2
         KE_other = .5 * self.mass * tip_velocity ** 2
-        volume = 2 * (self.thickness * min(self.length, other.width) * other.thickness) / 1000 ** 3
-        # volume = (self.thickness * self.length * other.thickness) / 1000 ** 3
+        volume = 2 * (self.thickness * min(self.length, other.width) * other.thickness)
+        # volume = (self.thickness * self.length * other.thickness)
 
-        volume_other = (cut_length * other.thickness * self.thickness + (3*2*cut_length)) / 1000**3
-        volume_self = (self.thickness * self.width * self.length) / 1000**3
+        area_other = (cut_length * other.thickness * self.thickness + (3*2*cut_length))
+        area_self = (self.thickness * self.width )
 
 
-        self.calc_damage(KE_self, volume_self)
-        other.calc_damage(KE_other, volume_other)
+        self.calc_damage(KE_self, other)
+        other.calc_damage(KE_other, self)
 
     def stab(self, other, velocity):
         KE = .5 * self.mass * velocity ** 2
-        volume = 2 * (self.thickness * min(self.width, other.width) * other.thickness) / 1000 ** 3
-        # volume = (self.thickness * self.length * other.thickness) / 1000 ** 3
+        volume = 2 * (self.thickness * min(self.width, other.width) * other.thickness)
+        # volume = (self.thickness * self.length * other.thickness)
         area = min(self.width, other.width, other.length) * self.thickness
 
-        self.calc_damage(KE, 8 * (area * self.length) / 1000 ** 3)
-        other.calc_damage(KE, 8 * (area * other.thickness) / 1000 ** 3)
+        self.calc_damage(KE, 8 * (area * self.length))
+        other.calc_damage(KE, 8 * (area * other.thickness))
 
+class Chainmail:
+    link_thickness = 1.5 / 1000
+    link_diameter = 4 / 1000
+    thickness = link_thickness * 3
+    width = 500 / 1000
+    length = 700 / 1000
 
+    def __init__(self, material):
+        self.material = material
 
-class Breastplate:
-    thickness = 4.5
-    width = 500
-    length = 700
-    tensile_ult = 766 * 1000000
-    tensile_yield = 572 * 1000000
-    shear_yield = tensile_yield * .566
-    shear_ult = tensile_ult * .566
-    mod_of_elasticity = 1202000 * 1000000
-    shear_modulus = 79500 * 1000000
-    strain_at_fracture = .2
-
-    def __init__(self):
-        self.tensile_stress_strain, self.tensile_elastic_limit, self.tensile_plastic_limit = self.calc_stress_strain(
-            self.mod_of_elasticity, self.tensile_yield, self.tensile_ult, self.strain_at_fracture)
-        self.shear_stress_strain, self.shear_elastic_limit, self.shear_plastic_limit = self.calc_stress_strain(
-            self.shear_modulus, self.shear_yield, self.shear_ult, self.strain_at_fracture)
-
-    def calc_stress_strain(self, slope, tan_y, asymptote, break_point):
-        func1 = lambda x: x * slope
-        tan_x = tan_y / slope
-        L = (asymptote - tan_y) * 2
-        k = (slope * 4) / L
-        func2 = lambda x: logistic(x, L, k, tan_x, tan_y)
-        elastic_energy = func1(tan_x) * tan_x / 2
-        break_energy = integrate.quad(func2, tan_x, break_point)[0] + elastic_energy
-
-        def comp(x):
-            if x < tan_x:
-                return func1(x)
-            elif tan_x < x < break_point:
-                return func2(x)
-            else:
-                return 0
-
-        return comp, elastic_energy, break_energy
-
-    def calc_damage(self, KE, volume):
+    def calc_damage(self, KE, other):
+        cut_length = min(other.length, self.width, self.length)
+        volume = (cut_length * self.thickness * self.link_diameter * 2)
         print("armour:")
-        pl = self.shear_plastic_limit * volume
-        el = self.shear_elastic_limit * volume
+        pl = self.material.shear_plastic_limit * volume
+        el = self.material.shear_elastic_limit * volume
 
         print(KE, el, pl)
 
@@ -178,22 +186,51 @@ class Breastplate:
             print('Pierced')
         elif KE > el:
             print('Bent')
-            for s in np.linspace(0, self.strain_at_fracture, 100, endpoint=False):
-                if integrate.quad(self.shear_stress_strain, 0, s)[0] * volume > KE:
+            for s in np.linspace(0, self.material.strain_at_fracture, 100, endpoint=False):
+                if integrate.quad(self.material.shear_stress_strain, 0, s)[0] * volume > KE:
+                    print(s)
+                    break
+        else:
+            print('Deflected')
+
+class Breastplate:
+    thickness = 3 / 1000
+    width = 500 / 1000
+    length = 700 / 1000
+
+    def __init__(self, material):
+        self.material = material
+
+    def calc_damage(self, KE, other):
+        cut_length = min(other.length, self.width, self.length)
+        volume = cut_length * self.thickness * max(self.width, self.length)
+        print("armour:")
+        pl = self.material.shear_plastic_limit * volume
+        el = self.material.shear_elastic_limit * volume
+
+        print(KE, el, pl)
+
+        if KE > pl:
+            print('Pierced')
+        elif KE > el:
+            print('Bent')
+            for s in np.linspace(0, self.material.strain_at_fracture, 100, endpoint=False):
+                if integrate.quad(self.material.shear_stress_strain, 0, s)[0] * volume > KE:
                     print(s)
                     break
         else:
             print('Deflected')
 
 class Human:
-    elbow_len = 460
+    elbow_len = 460 / 1000
+
+m = Low_Carbon()
 
 h = Human()
-s = Sword(h)
-bp = Breastplate()
+s = Sword(h, High_Carbon())
+a = Chainmail(Low_Carbon())
 
-s.slash(bp, 26)
-
+s.slash(a, 26)
 
 # First compare yield strength to elastic limit and then to plastic limit of weapon to armor if it is lower then it can
 # never cause damage.
