@@ -51,12 +51,12 @@ class Sword:
     thickness = 2.6
     width = 48.5
     length = 886
-    tensile_ult = 766 * 1000000
-    tensile_yield = 572 * 1000000
-    shear_yield = tensile_yield / 2
-    shear_ult = tensile_ult / 2
+    tensile_ult = 130 * 1000000
+    tensile_yield = 11 00 * 1000000
+    shear_yield = tensile_yield * .566
+    shear_ult = tensile_ult * .566
     mod_of_elasticity = 202000 * 1000000
-    shear_modulus = 79500 * 1000000
+    shear_modulus = 80000 * 1000000
     mass = 1.182
     strain_at_fracture = .2
 
