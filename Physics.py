@@ -8,17 +8,19 @@ import numpy as np
 
 
 def logistic(x, L, k, x0, y0):
-    return L / (1 + math.e ** (-k*(x-x0))) + y0 - L / 2
+    return L / (1 + math.e ** (-k * (x - x0))) + y0 - L / 2
+
 
 def logit(x, L, k, x0, y0):
     try:
-        return -L*math.log((1 / (k * (x-x0+1/(2*k)))) - 1) + y0
+        return -L * math.log((1 / (k * (x - x0 + 1 / (2 * k)))) - 1) + y0
     except Exception as e:
         pass
         # print(x, (1 / (k * (x-x0+.5-k))) - 1,  e)
 
+
 def logitprime(x, L, k, x0, y0):
-    return -(4*k*L)/(-1 + 4*k**2*(x - x0)**2)
+    return -(4 * k * L) / (-1 + 4 * k ** 2 * (x - x0) ** 2)
 
 
 def compose(slope, tan_x, asymptote):
@@ -34,6 +36,7 @@ def compose(slope, tan_x, asymptote):
     break_energy = integrate.quad(func2, tan_x, asymptote)[0] + elastic_energy
 
     return lambda x: func1(x) if x < tan_x else func2(x), elastic_energy, break_energy
+
 
 class Material:
     tensile_ult = None
@@ -72,6 +75,7 @@ class Material:
 
         return comp, elastic_energy, break_energy
 
+
 class Low_Carbon(Material):
     tensile_ult = 766 * 1e6
     tensile_yield = 572 * 1e6
@@ -83,6 +87,7 @@ class Low_Carbon(Material):
 
     def __init__(self):
         super().__init__()
+
 
 class Med_Carbon(Material):
     tensile_ult = 987 * 1e6
@@ -96,6 +101,7 @@ class Med_Carbon(Material):
     def __init__(self):
         super().__init__()
 
+
 class High_Carbon(Material):
     tensile_ult = 1010 * 1e6
     tensile_yield = 810 * 1e6
@@ -107,6 +113,7 @@ class High_Carbon(Material):
 
     def __init__(self):
         super().__init__()
+
 
 class Sword:
     thickness = 2.6 / 1000
@@ -142,26 +149,17 @@ class Sword:
         tip_velocity = ang_velocity * (self.wielder.elbow_len + self.length)
         bottom_velocity = ang_velocity * (self.wielder.elbow_len + (self.length * 2 / 3) - cut_length)
         print(tip_velocity, bottom_velocity)
-        KE_self = .5 * (self.mass/2) * bottom_velocity ** 2
+        KE_self = .5 * (self.mass / 2) * bottom_velocity ** 2
         KE_other = .5 * self.mass * tip_velocity ** 2
-        volume = 2 * (self.thickness * min(self.length, other.width) * other.thickness)
-        # volume = (self.thickness * self.length * other.thickness)
-
-        area_other = (cut_length * other.thickness * self.thickness + (3*2*cut_length))
-        area_self = (self.thickness * self.width )
-
-
         self.calc_damage(KE_self, other)
         other.calc_damage(KE_other, self)
 
     def stab(self, other, velocity):
         KE = .5 * self.mass * velocity ** 2
-        volume = 2 * (self.thickness * min(self.width, other.width) * other.thickness)
-        # volume = (self.thickness * self.length * other.thickness)
         area = min(self.width, other.width, other.length) * self.thickness
-
         self.calc_damage(KE, 8 * (area * self.length))
         other.calc_damage(KE, 8 * (area * other.thickness))
+
 
 class Chainmail:
     link_thickness = 1.5 / 1000
@@ -193,6 +191,7 @@ class Chainmail:
         else:
             print('Deflected')
 
+
 class Breastplate:
     thickness = 3 / 1000
     width = 500 / 1000
@@ -221,8 +220,10 @@ class Breastplate:
         else:
             print('Deflected')
 
+
 class Human:
     elbow_len = 460 / 1000
+
 
 m = Low_Carbon()
 
@@ -237,4 +238,3 @@ s.slash(a, 26)
 #
 # Then calculate damage to weapon then damage to armor
 #
-
