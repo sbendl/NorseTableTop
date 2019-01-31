@@ -120,6 +120,7 @@ class Sword:
     width = 48.5 / 1000
     length = 886 / 1000
     mass = 1.182
+    tip_angle = 45
 
     def __init__(self, wielder, material):
         self.wielder = wielder
@@ -152,13 +153,13 @@ class Sword:
         KE_self = .5 * (self.mass / 2) * bottom_velocity ** 2
         KE_other = .5 * self.mass * tip_velocity ** 2
         self.calc_damage(KE_self, other)
-        other.calc_damage(KE_other, self)
+        other.calc_cutting_damage(KE_other, self)
 
     def stab(self, other, velocity):
         KE = .5 * self.mass * velocity ** 2
         area = min(self.width, other.width, other.length) * self.thickness
         self.calc_damage(KE, 8 * (area * self.length))
-        other.calc_damage(KE, 8 * (area * other.thickness))
+        other.calc_piercing_damage(KE, self)
 
 
 class Chainmail:
@@ -171,7 +172,7 @@ class Chainmail:
     def __init__(self, material):
         self.material = material
 
-    def calc_damage(self, KE, other):
+    def calc_cutting_damage(self, KE, other):
         cut_length = min(other.length, self.width, self.length)
         volume = (cut_length * self.thickness * self.link_diameter * 2)
         print("armour:")
@@ -190,6 +191,37 @@ class Chainmail:
                     break
         else:
             print('Deflected')
+
+    def calc_piercing_damage(self, KE, other):
+        cut_length = min(other.width, self.width, self.length)
+        area = 2 * math.pi * (self.link_thickness / 2)**2
+        link_length = self.link_diameter * math.pi
+        volume = area * link_length
+        print("armour:")
+        pl = self.material.shear_plastic_limit * volume
+        el = self.material.shear_elastic_limit * volume
+
+        print(KE, el, pl)
+
+        rip_size = self.link_diameter - self.link_thickness * 2
+
+        while rip_size < cut_length:
+            if KE > pl:
+                print('Link Broken')
+                KE -= pl
+                rip_size += link_length
+            elif KE > el:
+                print('Bent')
+                for s in np.linspace(0, self.material.strain_at_fracture, 100, endpoint=False):
+                    e = integrate.quad(self.material.shear_stress_strain, 0, s)[0] * volume
+                    if s * link_length >= cut_length:
+                        KE -= pl
+                        break
+                    if e > KE:
+                        print(s*link_length)
+                        break
+            else:
+                print('Deflected')
 
 
 class Breastplate:
@@ -231,10 +263,4 @@ h = Human()
 s = Sword(h, High_Carbon())
 a = Chainmail(Low_Carbon())
 
-s.slash(a, 26)
-
-# First compare yield strength to elastic limit and then to plastic limit of weapon to armor if it is lower then it can
-# never cause damage.
-#
-# Then calculate damage to weapon then damage to armor
-#
+s.stab(a, 26)
