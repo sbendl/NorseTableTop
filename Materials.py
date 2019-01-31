@@ -8,6 +8,7 @@ class Material:
     mod_of_elasticity = None
     shear_modulus = None
     strain_at_fracture = None
+    density = None
 
     def __init__(self):
         self.tensile_stress_strain, self.tensile_elastic_limit, self.tensile_plastic_limit = Physics.calc_stress_strain(
@@ -52,6 +53,43 @@ class High_Carbon(Material):
     mod_of_elasticity = 198 * 1000 * 1e6
     shear_modulus = 79.9 * 1000 * 1e6
     strain_at_fracture = .146
+
+    def __init__(self):
+        super().__init__()
+
+class Muscle(Material):
+    density = 1.2 * 1000
+    tensile_ult = .47 * 1e6
+    tensile_yield = .42 * 1e6
+    shear_yield = tensile_yield * .566
+    shear_ult = tensile_ult * .566
+    shear_modulus = .3 * 1e6
+    mod_of_elasticity = .266 * 1e6
+
+    def __init__(self):
+        super().__init__()
+
+class Tendon(Material):
+    density = 1.2 * 1000
+    tensile_ult = 80 * 1e6
+    tensile_yield = 75 * 1e6
+    shear_yield = tensile_yield * .566
+    shear_ult = tensile_ult * .566
+    strain_at_fracture = .25
+    mod_of_elasticity = 2 * 1000 * 1e6
+
+    def __init__(self):
+        super().__init__()
+
+class Bone(Material):
+    tensile_ult = 130 * 1e6
+    tensile_yield = 122 * 1e6
+    shear_yield = tensile_yield * .566
+    shear_ult = tensile_ult * .566
+    mod_of_elasticity = 17.6 * 1000 * 1e6
+    shear_modulus = 4 * 1000 * 1e6
+    strain_at_fracture = .03
+    density = 3.3 * 1000
 
     def __init__(self):
         super().__init__()
