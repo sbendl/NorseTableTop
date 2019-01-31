@@ -193,33 +193,38 @@ class Chainmail:
             print('Deflected')
 
     def calc_piercing_damage(self, KE, other):
+        # TODO as shear strain increases cross sectional area decreases so tension toughness decreases
         cut_length = min(other.width, self.width, self.length)
         area = 2 * math.pi * (self.link_thickness / 2)**2
         print("armour:")
+        link_broken = False
 
         rip_size = self.link_diameter - self.link_thickness * 2
 
         while rip_size < cut_length and KE > 0:
             link_length = self.link_diameter * math.pi
             volume = area * rip_size
-            pl = self.material.shear_plastic_limit * volume
-            el = self.material.shear_elastic_limit * volume
+            pl = self.material.tensile_plastic_limit * volume
+            el = self.material.tensile_elastic_limit * volume
             print(KE, el, pl)
-            if KE > pl:
+            if KE * math.cos(other.tip_angle) > pl:
+                if not link_broken:
+                    volume *= 2
+                link_broken = True
                 print('Link Broken')
                 KE -= pl
                 rip_size += link_length
                 if rip_size > cut_length:
                     print('Pierced', KE)
-            elif KE > el:
+            elif KE * math.cos(other.tip_angle) > el:
                 print('Bent')
                 for s in np.linspace(0, self.material.strain_at_fracture, 100, endpoint=False):
-                    e = integrate.quad(self.material.shear_stress_strain, 0, s)[0] * volume
+                    e = integrate.quad(self.material.tensile_stress_strain, 0, s)[0] * volume
                     if rip_size * s >= cut_length:
                         KE -= pl
                         print("Pierced", KE)
                         break
-                    if e > KE:
+                    if e > KE * math.cos(other.tip_angle):
                         print(s*link_length)
                         KE = 0
                         break
@@ -271,7 +276,7 @@ class Human:
 m = Low_Carbon()
 
 h = Human()
-s = Sword(h, High_Carbon())
+s = Sword(h, Low_Carbon())
 a = Chainmail(Low_Carbon())
 
-s.stab(a, 5)
+s.stab(a, 10)
