@@ -195,30 +195,33 @@ class Chainmail:
     def calc_piercing_damage(self, KE, other):
         cut_length = min(other.width, self.width, self.length)
         area = 2 * math.pi * (self.link_thickness / 2)**2
-        link_length = self.link_diameter * math.pi
-        volume = area * link_length
         print("armour:")
-        pl = self.material.shear_plastic_limit * volume
-        el = self.material.shear_elastic_limit * volume
-
-        print(KE, el, pl)
 
         rip_size = self.link_diameter - self.link_thickness * 2
 
-        while rip_size < cut_length:
+        while rip_size < cut_length and KE > 0:
+            link_length = self.link_diameter * math.pi
+            volume = area * rip_size
+            pl = self.material.shear_plastic_limit * volume
+            el = self.material.shear_elastic_limit * volume
+            print(KE, el, pl)
             if KE > pl:
                 print('Link Broken')
                 KE -= pl
                 rip_size += link_length
+                if rip_size > cut_length:
+                    print('Pierced', KE)
             elif KE > el:
                 print('Bent')
                 for s in np.linspace(0, self.material.strain_at_fracture, 100, endpoint=False):
                     e = integrate.quad(self.material.shear_stress_strain, 0, s)[0] * volume
-                    if s * link_length >= cut_length:
+                    if rip_size * s >= cut_length:
                         KE -= pl
+                        print("Pierced", KE)
                         break
                     if e > KE:
                         print(s*link_length)
+                        KE = 0
                         break
             else:
                 print('Deflected')
@@ -232,9 +235,7 @@ class Breastplate:
     def __init__(self, material):
         self.material = material
 
-    def calc_damage(self, KE, other):
-        cut_length = min(other.length, self.width, self.length)
-        volume = cut_length * self.thickness * max(self.width, self.length)
+    def calc_damage(self, KE, volume):
         print("armour:")
         pl = self.material.shear_plastic_limit * volume
         el = self.material.shear_elastic_limit * volume
@@ -252,6 +253,16 @@ class Breastplate:
         else:
             print('Deflected')
 
+    def calc_piercing_damage(self, KE, other):
+        cut_length = min(other.width, other.thickness, self.width)
+        volume = cut_length * self.thickness * max(self.width, self.length)
+        self.calc_damage(KE, volume)
+
+    def calc_cutting_damage(self, KE, other):
+        cut_length = min(other.length, self.width, self.length)
+        volume = cut_length * self.thickness * max(self.width, self.length)
+        self.calc_damage(KE, volume)
+
 
 class Human:
     elbow_len = 460 / 1000
@@ -263,4 +274,4 @@ h = Human()
 s = Sword(h, High_Carbon())
 a = Chainmail(Low_Carbon())
 
-s.stab(a, 26)
+s.stab(a, 5)
