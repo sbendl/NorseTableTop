@@ -5,7 +5,7 @@ from Creatures import *
 
 m = Low_Carbon()
 
-h = Human()
+h = Human(height=2)
 s = Sword(h, Low_Carbon())
 a = Chainmail(Low_Carbon())
 
