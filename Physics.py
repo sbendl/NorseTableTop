@@ -55,8 +55,3 @@ def calc_stress_strain(slope, tan_y, asymptote, break_point):
             return 0
 
     return comp, elastic_energy, break_energy
-
-
-
-
-

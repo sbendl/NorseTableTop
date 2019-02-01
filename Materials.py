@@ -20,6 +20,7 @@ class Material:
 
 
 class Low_Carbon(Material):
+    density = 8.05 * 1000
     tensile_ult = 766 * 1e6
     tensile_yield = 572 * 1e6
     shear_yield = tensile_yield * .566
@@ -33,6 +34,7 @@ class Low_Carbon(Material):
 
 
 class Med_Carbon(Material):
+    density = 7.85 * 1000
     tensile_ult = 987 * 1e6
     tensile_yield = 685 * 1e6
     shear_yield = tensile_yield * .566
@@ -46,6 +48,7 @@ class Med_Carbon(Material):
 
 
 class High_Carbon(Material):
+    density = 7.5 * 1000
     tensile_ult = 1010 * 1e6
     tensile_yield = 810 * 1e6
     shear_yield = tensile_yield * .566
@@ -57,7 +60,14 @@ class High_Carbon(Material):
     def __init__(self):
         super().__init__()
 
-class Muscle(Material):
+
+class Fleshy(Material):
+    density = .985 * 1000
+
+    def __init__(self):
+        super().__init__()
+
+class Muscle(Fleshy):
     density = 1.2 * 1000
     tensile_ult = .47 * 1e6
     tensile_yield = .42 * 1e6
@@ -69,7 +79,7 @@ class Muscle(Material):
     def __init__(self):
         super().__init__()
 
-class Tendon(Material):
+class Tendon(Fleshy):
     density = 1.2 * 1000
     tensile_ult = 80 * 1e6
     tensile_yield = 75 * 1e6
@@ -81,7 +91,7 @@ class Tendon(Material):
     def __init__(self):
         super().__init__()
 
-class Bone(Material):
+class Bone(Fleshy):
     tensile_ult = 130 * 1e6
     tensile_yield = 122 * 1e6
     shear_yield = tensile_yield * .566
@@ -93,3 +103,4 @@ class Bone(Material):
 
     def __init__(self):
         super().__init__()
+
