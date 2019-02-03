@@ -14,6 +14,9 @@ class Sword:
         self.wielder = wielder
         self.material = material
 
+    def calc_moment_of_inertia(self, extra_length=0):
+        return (1 / 3) * self.mass * (self.length + extra_length) ** 2
+
     def calc_damage(self, KE, other):
         print("weapon:")
         volume = self.width * self.thickness * self.length

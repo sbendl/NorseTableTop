@@ -1,14 +1,14 @@
 import Physics
 
 class Material:
-    tensile_ult = None
-    tensile_yield = None
-    shear_yield = None
-    shear_ult = None
-    mod_of_elasticity = None
-    shear_modulus = None
-    strain_at_fracture = None
-    density = None
+    tensile_ult = 1
+    tensile_yield = 0
+    shear_yield = 0
+    shear_ult = 1
+    mod_of_elasticity = 1
+    shear_modulus = 1
+    strain_at_fracture = 0
+    density = 0
 
     def __init__(self):
         self.tensile_stress_strain, self.tensile_elastic_limit, self.tensile_plastic_limit = Physics.calc_stress_strain(
@@ -63,6 +63,13 @@ class High_Carbon(Material):
 
 class Fleshy(Material):
     density = .985 * 1000
+    tensile_ult = .47 * 1e6
+    tensile_yield = .42 * 1e6
+    shear_yield = tensile_yield * .566
+    shear_ult = tensile_ult * .566
+    shear_modulus = .3 * 1e6
+    mod_of_elasticity = .266 * 1e6
+    strain_at_fracture = .2
 
     def __init__(self):
         super().__init__()
@@ -75,6 +82,7 @@ class Muscle(Fleshy):
     shear_ult = tensile_ult * .566
     shear_modulus = .3 * 1e6
     mod_of_elasticity = .266 * 1e6
+    strain_at_fracture = .2
 
     def __init__(self):
         super().__init__()
