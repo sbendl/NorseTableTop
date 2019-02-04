@@ -1,6 +1,9 @@
 import copy
 import math
 
+from scipy import integrate
+import numpy as np
+
 import Materials
 
 
@@ -137,8 +140,36 @@ class BodyPart(Thing):
         speed, length = self.parent.calc_attack_speed(num_joints, joints_found)
         return speed + joint_speed, length + self.length
 
+    def calc_damage(self, KE, volume):
+        print("armour:")
+        pl = self.shear_plastic_limit * volume
+        el = self.shear_elastic_limit * volume
+
+        print(KE, el, pl)
+
+        if KE > pl:
+            print('Pierced')
+        elif KE > el:
+            print('Bent')
+            for s in np.linspace(0, self.strain_at_fracture, 100, endpoint=False):
+                if integrate.quad(self.shear_stress_strain, 0, s)[0] * volume > KE:
+                    print(s)
+                    break
+        else:
+            print('Deflected')
+
+    def calc_cutting_damage(self, KE, other):
+        pass
+
+    def calc_piercing_damage(self, KE, other):
+        pass
+
     def calc_crushing_damage(self, KE, other):
-        
+        #TODO Calc area
+        pass
+        w = min(self.width, other.width)
+        l = min(self.length, other.length)
+        a = (2 * w + 2 * l) * self.thickness
 
     def foreswing(self, other, num_joints):
         ang_vel, body_len = self.calc_attack_speed(num_joints)
@@ -146,14 +177,15 @@ class BodyPart(Thing):
         if self.held is not None:
             self.held.foreswing(ang_vel)
         else:
-            cut_length = min(self.length, other.width, other.length)
+            impact_length = min(self.length, self.width, other.width, other.length)
             tip_velocity = ang_vel * (body_len + self.length)
-            bottom_velocity = ang_vel * (body_len + (self.length * 2 / 3) - cut_length)
-            print(tip_velocity, bottom_velocity)
-            KE_self = .5 * (self.mass / 2) * bottom_velocity ** 2
-            KE_other = .5 * self.mass * tip_velocity ** 2
-            self.calc_damage(KE_self, other)
-            other.calc_cutting_damage(KE_other, self)
+            KE = .5 * self.mass * tip_velocity ** 2
+
+            if impact_length == self.length or impact_length == self.width:
+                self.calc_crushing_damage(KE, other)
+            else:
+                self.calc_cutting_damage(KE, other)
+            other.calc_cutting_damage(KE, self)
 
     def backswing(self, num_joints):
         pass
