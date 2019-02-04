@@ -37,6 +37,7 @@ def compose(slope, tan_x, asymptote):
 
     return lambda x: func1(x) if x < tan_x else func2(x), elastic_energy, break_energy
 
+
 def calc_stress_strain(slope, tan_y, asymptote, break_point):
     func1 = lambda x: x * slope
     tan_x = tan_y / slope

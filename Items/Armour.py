@@ -37,7 +37,7 @@ class Chainmail:
     def calc_piercing_damage(self, KE, other):
         # TODO as shear strain increases cross sectional area decreases so tension toughness decreases
         cut_length = min(other.width, self.width, self.length)
-        area = 2 * math.pi * (self.link_thickness / 2)**2
+        area = 2 * math.pi * (self.link_thickness / 2) ** 2
         print("armour:")
         link_broken = False
 
@@ -67,7 +67,7 @@ class Chainmail:
                         print("Pierced", KE)
                         break
                     if e > KE * math.cos(other.tip_angle):
-                        print(s*link_length)
+                        print(s * link_length)
                         KE = 0
                         break
             else:
@@ -109,4 +109,3 @@ class Breastplate:
         cut_length = min(other.length, self.width, self.length)
         volume = cut_length * self.thickness * max(self.width, self.length)
         self.calc_damage(KE, volume)
-

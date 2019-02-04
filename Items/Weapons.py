@@ -3,6 +3,7 @@ from scipy import integrate
 
 import numpy as np
 
+
 class Sword:
     thickness = 2.6 / 1000
     width = 48.5 / 1000

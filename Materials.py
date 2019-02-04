@@ -1,5 +1,6 @@
 import Physics
 
+
 class Material:
     tensile_ult = 1
     tensile_yield = 0
@@ -74,6 +75,7 @@ class Fleshy(Material):
     def __init__(self):
         super().__init__()
 
+
 class Muscle(Fleshy):
     density = 1.2 * 1000
     tensile_ult = .47 * 1e6
@@ -87,6 +89,7 @@ class Muscle(Fleshy):
     def __init__(self):
         super().__init__()
 
+
 class Tendon(Fleshy):
     density = 1.2 * 1000
     tensile_ult = 80 * 1e6
@@ -98,6 +101,7 @@ class Tendon(Fleshy):
 
     def __init__(self):
         super().__init__()
+
 
 class Bone(Fleshy):
     tensile_ult = 130 * 1e6
@@ -111,4 +115,3 @@ class Bone(Fleshy):
 
     def __init__(self):
         super().__init__()
-

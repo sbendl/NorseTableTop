@@ -14,6 +14,7 @@ class Character():
 class Creature():
     strength_scaler = None
 
+
 class Thing(Materials.Material):
     def __init__(self):
         super().__init__()
@@ -448,7 +449,7 @@ class Human(Humanoid, Character):
             part.creature = self
 
 
-h = Human(2, 20, {}, {'strength': 20})
+h = Human(2, 20, {}, {'strength': 40})
 print(h.right_palm.calc_attack_speed(2))
 # TODO Attacks don't come from body level but from part level - i.e. leg can attack
 # TODO if part is wielding an object use the corresponding attack method from the object
