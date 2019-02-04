@@ -137,15 +137,18 @@ class BodyPart(Thing):
         speed, length = self.parent.calc_attack_speed(num_joints, joints_found)
         return speed + joint_speed, length + self.length
 
+    def calc_crushing_damage(self, KE, other):
+        
+
     def foreswing(self, other, num_joints):
-        ang_vel = self.calc_attack_speed(num_joints)
+        ang_vel, body_len = self.calc_attack_speed(num_joints)
 
         if self.held is not None:
             self.held.foreswing(ang_vel)
         else:
             cut_length = min(self.length, other.width, other.length)
-            tip_velocity = ang_vel * (self.wielder.elbow_len + self.length)
-            bottom_velocity = ang_vel * (self.wielder.elbow_len + (self.length * 2 / 3) - cut_length)
+            tip_velocity = ang_vel * (body_len + self.length)
+            bottom_velocity = ang_vel * (body_len + (self.length * 2 / 3) - cut_length)
             print(tip_velocity, bottom_velocity)
             KE_self = .5 * (self.mass / 2) * bottom_velocity ** 2
             KE_other = .5 * self.mass * tip_velocity ** 2

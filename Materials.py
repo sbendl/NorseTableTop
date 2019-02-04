@@ -4,6 +4,8 @@ import Physics
 class Material:
     tensile_ult = 1
     tensile_yield = 0
+    compressive_yield = 0
+    compressive_ult = 1
     shear_yield = 0
     shear_ult = 1
     mod_of_elasticity = 1
@@ -18,12 +20,16 @@ class Material:
         self.shear_stress_strain, self.shear_elastic_limit, self.shear_plastic_limit = Physics.calc_stress_strain(
             self.shear_modulus, self.shear_yield, self.shear_ult,
             self.strain_at_fracture)
+        self.compressive_stress_strain, self.compressive_elastic_limit, self.compressive_plastic_limit = Physics.calc_stress_strain(
+            self.mod_of_elasticity, self.compressive_yield, self.compressive_ult, self.strain_at_fracture)
 
 
 class Low_Carbon(Material):
     density = 8.05 * 1000
     tensile_ult = 766 * 1e6
     tensile_yield = 572 * 1e6
+    compressive_yield = 1480 * 1e6
+    compressive_ult = 10000 * 1e6
     shear_yield = tensile_yield * .566
     shear_ult = tensile_ult * .566
     mod_of_elasticity = 202 * 1000 * 1e6
@@ -38,6 +44,8 @@ class Med_Carbon(Material):
     density = 7.85 * 1000
     tensile_ult = 987 * 1e6
     tensile_yield = 685 * 1e6
+    compressive_yield = 1800 * 1e6
+    compressive_ult = 10000 * 1e6
     shear_yield = tensile_yield * .566
     shear_ult = tensile_ult * .566
     mod_of_elasticity = 203 * 1000 * 1e6
@@ -52,6 +60,8 @@ class High_Carbon(Material):
     density = 7.5 * 1000
     tensile_ult = 1010 * 1e6
     tensile_yield = 810 * 1e6
+    compressive_yield = 2160 * 1e6
+    compressive_ult = 10000 * 1e6
     shear_yield = tensile_yield * .566
     shear_ult = tensile_ult * .566
     mod_of_elasticity = 198 * 1000 * 1e6
@@ -68,6 +78,8 @@ class Fleshy(Material):
     tensile_yield = .42 * 1e6
     shear_yield = tensile_yield * .566
     shear_ult = tensile_ult * .566
+    compressive_yield = .02 * 1e6
+    compressive_ult = .1 * 1e6
     shear_modulus = .3 * 1e6
     mod_of_elasticity = .266 * 1e6
     strain_at_fracture = .2
@@ -104,6 +116,8 @@ class Tendon(Fleshy):
 
 
 class Bone(Fleshy):
+    compressive_yield = 170 * 1e6
+    compressive_ult = 175 * 1e6
     tensile_ult = 130 * 1e6
     tensile_yield = 122 * 1e6
     shear_yield = tensile_yield * .566
