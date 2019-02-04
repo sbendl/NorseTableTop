@@ -124,7 +124,7 @@ class BodyPart(Thing):
         joint_speed = 0
         if self.core:
             if num_joints == -1:
-                return 0
+                return 0, 0
             elif joints_found < num_joints:
                 raise Exception("That many joints don't exist above this part")
         if isinstance(self, Joint):
@@ -132,22 +132,25 @@ class BodyPart(Thing):
             joint_speed = self.rel_strength * self.creature.traits[
                 'strength'] / self.calc_moment_of_inertia_below() * self.creature.strength_scaler
             if joints_found == num_joints:
-                return joint_speed
+                return joint_speed, self.length
 
-        return self.parent.calc_attack_speed(num_joints, joints_found) + joint_speed
+        speed, length = self.parent.calc_attack_speed(num_joints, joints_found)
+        return speed + joint_speed, length + self.length
 
-    def foreswing(self, num_joints):
-        pass
+    def foreswing(self, other, num_joints):
+        ang_vel = self.calc_attack_speed(num_joints)
 
-        # all_parts = self.get_parts_below() + parts_above
-        #
-        # body_length = sum(part.length for part in parts_above)
-        #
-        # body_inertia = parts_above[-1].calc_moment_of_inertia_below()
-        #
-        # if self.held is not None:
-        #     held_inertia = self.held.calc_moment_of_inertia(body_length)
-        #     tot_inertia = held_inertia + body_inertia
+        if self.held is not None:
+            self.held.foreswing(ang_vel)
+        else:
+            cut_length = min(self.length, other.width, other.length)
+            tip_velocity = ang_vel * (self.wielder.elbow_len + self.length)
+            bottom_velocity = ang_vel * (self.wielder.elbow_len + (self.length * 2 / 3) - cut_length)
+            print(tip_velocity, bottom_velocity)
+            KE_self = .5 * (self.mass / 2) * bottom_velocity ** 2
+            KE_other = .5 * self.mass * tip_velocity ** 2
+            self.calc_damage(KE_self, other)
+            other.calc_cutting_damage(KE_other, self)
 
     def backswing(self, num_joints):
         pass
@@ -450,7 +453,7 @@ class Human(Humanoid, Character):
 
 
 h = Human(2, 20, {}, {'strength': 40})
-print(h.right_palm.calc_attack_speed(2))
+print(h.right_palm.calc_attack_speed(1))
 # TODO Attacks don't come from body level but from part level - i.e. leg can attack
 # TODO if part is wielding an object use the corresponding attack method from the object
 # TODO Attacks come in: Jab Foreswing Backswing Downswing Upswing (Swing come in slap and strike)
