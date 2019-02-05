@@ -28,18 +28,86 @@ class Thing(Materials.Material):
         raise NotImplementedError
 
 
+class Organ(Thing):
+    def __init__(self, critical):
+        super().__init__()
+        self.critical = critical
+
+class FloatingOrgan(Organ):
+    def __init__(self, relative_size, **kwargs):
+        super().__init__(**kwargs)
+        self.relative_size = relative_size
+
+class Brain(FloatingOrgan, Materials.Fleshy):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+class Stomach(FloatingOrgan, Materials.Fleshy):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+class Liver(FloatingOrgan, Materials.Fleshy):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+class Intestines(FloatingOrgan, Materials.Fleshy):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+
+class Lung(FloatingOrgan, Materials.Fleshy):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+
+class Heart(FloatingOrgan, Materials.Muscle):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+
+
+class WrapperOrgan(Organ):
+    def __init__(self, thickness, **kwargs):
+        super().__init__(**kwargs)
+        self.thickness = thickness
+
+class Larynx(WrapperOrgan, Materials.Fleshy):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+
+class WrappingBone(WrapperOrgan, Materials.Bone):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+class FloatingBone(FloatingOrgan, Materials.Bone):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+
+class SkinLayer(WrapperOrgan, Materials.Fleshy):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+
+class MuscleLayer(WrapperOrgan, Materials.Muscle):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+
 # class BodyPlan:
 #     def __init__(self):
 #         self.parts_list = []
 
 
 class BodyPart(Thing):
-    def __init__(self, parent, children, contents, can_grasp, can_attack, core=False):
+    def __init__(self, parent, children, contents, layers, can_grasp, can_attack, core=False):
         super().__init__()
         self.name = type(self).__name__
         self.parent = parent
         self.children = children
         self.contents = contents
+        self.layers = layers
         self.equipped = []
         self._can_grasp = can_grasp
         self.held = None
@@ -123,7 +191,7 @@ class BodyPart(Thing):
 
         return parts + self.parent.get_parts_above(num_joints, joints_found)
 
-    def calc_attack_speed(self, num_joints, joints_found=0):
+    def calc_slash_speed(self, num_joints, joints_found=0):
         joint_speed = 0
         if self.core:
             if num_joints == -1:
@@ -137,8 +205,25 @@ class BodyPart(Thing):
             if joints_found == num_joints:
                 return joint_speed, self.length
 
-        speed, length = self.parent.calc_attack_speed(num_joints, joints_found)
+        speed, length = self.parent.calc_slash_speed(num_joints, joints_found)
         return speed + joint_speed, length + self.length
+    
+    def calc_jab_speed(self, num_joints, joints_found=0):
+        joint_speed = 0
+        if self.core:
+            if num_joints == -1:
+                return 0, 0
+            elif joints_found < num_joints:
+                raise Exception("That many joints don't exist above this part")
+        if isinstance(self, Joint):
+            joints_found += 1
+            joint_speed = self.rel_strength * self.creature.traits[
+                'strength'] / self.calc_moment_of_inertia_below() * self.creature.strength_scaler
+            if joints_found == num_joints:
+                return joint_speed
+
+        speed = self.parent.calc_jab_speed(num_joints, joints_found)
+        return speed + joint_speed * self.length
 
     def calc_damage(self, KE, volume):
         print("armour:")
@@ -165,17 +250,15 @@ class BodyPart(Thing):
         pass
 
     def calc_crushing_damage(self, KE, other):
-        #TODO Calc area
-        pass
         w = min(self.width, other.width)
         l = min(self.length, other.length)
         a = (2 * w + 2 * l) * self.thickness
 
-    def foreswing(self, other, num_joints):
-        ang_vel, body_len = self.calc_attack_speed(num_joints)
+    def _swing_helper(self, other, num_joints):
+        ang_vel, body_len = self.calc_slash_speed(num_joints)
 
         if self.held is not None:
-            self.held.foreswing(ang_vel)
+            self.held.foreswing(other, ang_vel, body_len)
         else:
             impact_length = min(self.length, self.width, other.width, other.length)
             tip_velocity = ang_vel * (body_len + self.length)
@@ -187,17 +270,34 @@ class BodyPart(Thing):
                 self.calc_cutting_damage(KE, other)
             other.calc_cutting_damage(KE, self)
 
-    def backswing(self, num_joints):
-        pass
+    def foreswing(self, other, num_joints):
+        self._swing_helper(other, num_joints)
 
-    def upswing(self, num_joints):
-        pass
+    def backswing(self, other, num_joints):
+        self._swing_helper(other, num_joints)
 
-    def downswing(self, num_joints):
-        pass
+    def upswing(self, other, num_joints):
+        self._swing_helper(other, num_joints)
 
-    def jab(self):
-        pass
+    def downswing(self, other, num_joints):
+        self._swing_helper(other, num_joints)
+
+    def jab(self, other, num_joints):
+        vel = self.calc_jab_speed(num_joints)
+        print(vel)
+        if self.held is not None:
+            self.held.jab(other, vel)
+        else:
+            pass
+            # impact_length = min(self.length, self.width, other.width, other.length)
+            # tip_velocity = ang_vel * (body_len + self.length)
+            # KE = .5 * self.mass * tip_velocity ** 2
+            #
+            # if impact_length == self.length or impact_length == self.width:
+            #     self.calc_crushing_damage(KE, other)
+            # else:
+            #     self.calc_cutting_damage(KE, other)
+            # other.calc_cutting_damage(KE, self)
 
     def __repr__(self):
         return self.name
@@ -291,24 +391,33 @@ class Humanoid(Thing, Creature):
     num_legs = 2
     num_fingers = 5
     num_toes = 5
-    ideal_head = Head(contents=None, length=1 / 7.5, width=1 / 11.5, thickness=1 / 11.5,
+    ideal_skin = SkinLayer(thickenss=1 / 11.5 / 72.5, critical=False)
+    ideal_cranium = WrappingBone(thickness=1 / 11.5 / 20, critical=False)
+    ideal_arm_bone = WrappingBone(thickness=1 / 11.5 / 29, critical=False)
+    ideal_hand_bone = WrappingBone(thickness=.2/11.5)
+    ideal_leg_bone = WrappingBone(thickness=1 / 11.5 / 18, critical=False)
+    ideal_foot_bone = WrappingBone(thickness=1/11.5/20)
+    ideal_ribcage = WrappingBone(thickness=1 / 11.5 / 14.5, critical=False)
+    ideal_spine = WrappingBone(thickness=1 / 11.5 / 11, critical=True)
+    ideal_brain = Brain(relative_size=.9, critical=True)
+    ideal_stomach = Stomach(relative_size=.2, critical=True)
+    ideal_liver = Liver(relative_size=.3, critical=True)
+    ideal_intestine = Intestines(relative_size=.5, critical=False)
+    ideal_larynx = Larynx(thickness=1 / 11.5 / 15, critical=True)
+    ideal_heart = Heart(relative_size=.1, critical=True)
+    ideal_lung = Lung(relative_size=.4, critical=True)
+
+    ideal_head = Head(contents=[ideal_brain], layers=[ideal_skin, ideal_cranium], length=1 / 7.5, width=1 / 11.5, thickness=1 / 11.5,
                       can_attack=True, core=True, can_grasp=False)
-    ideal_neck = Neck(contents=None, length=1 / 11.5, width=1 / 11.5, thickness=1 / 11.5,
-                      can_attack=False, core=True, can_grasp=False)
-    ideal_upper_torso = TorsoSegment(contents=None, length=1.5 / 7.5, width=2 / 11.5, thickness=1.25 / 11.5,
-                                     can_attack=True, core=True, can_grasp=False)
+    ideal_neck = Neck(contents=[], layers=[ideal_skin, MuscleLayer(thickness=1/11.5/3), ideal_larynx, ideal_spine], length=1 / 11.5, width=1 / 11.5, thickness=1 / 11.5,can_attack=False, core=True, can_grasp=False)
+    ideal_upper_torso = TorsoSegment(contents=[ideal_lung, ideal_lung, ideal_heart], layers=[ideal_skin, MuscleLayer(thickness=1/11.5/20), ideal_ribcage, ideal_spine], length=1.5 / 7.5, width=2 / 11.5, thickness=1.25 / 11.5,can_attack=True, core=True, can_grasp=False)
     ideal_upper_torso.name = 'Upper Torso'
-    ideal_lower_torso = TorsoSegment(contents=None, length=1.25 / 7.5, width=1.75 / 11.5, thickness=1.5 / 11.5,
-                                     can_attack=False, core=True, can_grasp=False)
+    ideal_lower_torso = TorsoSegment(contents=[ideal_intestine, ideal_liver, ideal_stomach], layers=[ideal_skin, MuscleLayer(thickness=1/11.5/15), ideal_spine], length=1.25 / 7.5, width=1.75 / 11.5, thickness=1.5 / 11.5,can_attack=False, core=True, can_grasp=False)
     ideal_lower_torso.name = 'Lower Torso'
-    ideal_upper_leg = LimbSegment(contents=None, length=2 / 7.5, width=1 / 11.5, thickness=1 / 11.5, can_attack=False,
-                                  can_grasp=False)
-    ideal_lower_leg = LimbSegment(contents=None, length=1.75 / 7.5, width=.5 / 11.5, thickness=.5 / 11.5,
-                                  can_attack=False, can_grasp=False)
-    ideal_foot = LimbTerminus(contents=None, length=1.5 / 11.5, width=.5 / 11.5, thickness=.4 / 11.5, can_attack=True,
-                              can_grasp=False)
-    ideal_toe = Digit(contents=None, length=.2 / 11.5, width=.1 / 11.5, thickness=.1 / 11.5, can_attack=False,
-                      can_grasp=False)
+    ideal_upper_leg = LimbSegment(contents=[], layers=[ideal_skin, MuscleLayer(thickness=1/11.5/2), ideal_leg_bone], length=2 / 7.5, width=1 / 11.5, thickness=1 / 11.5, can_attack=False,can_grasp=False)
+    ideal_lower_leg = LimbSegment(contents=[], layers=[ideal_skin, MuscleLayer(thickness=1/11.5/3), ideal_leg_bone], length=1.75 / 7.5, width=.5 / 11.5, thickness=.5 / 11.5,can_attack=False, can_grasp=False)
+    ideal_foot = LimbTerminus(contents=[], layers=[ideal_skin, ideal_foot_bone], length=1.5 / 11.5, width=.5 / 11.5, thickness=.4 / 11.5, can_attack=True,can_grasp=False)
+    ideal_toe = Digit(contents=[], layers=[ideal_skin, ideal_foot_bone], length=.2 / 11.5, width=.1 / 11.5, thickness=.1 / 11.5, can_attack=False,can_grasp=False)
     ideal_upper_arm = LimbSegment(contents=None, length=2 / 11.5, width=.4 / 11.5, thickness=.4 / 11.5,
                                   can_attack=False, can_grasp=False)
     ideal_lower_arm = LimbSegment(contents=None, length=2 / 11.5, width=.25 / 11.5, thickness=.2 / 11.5,
@@ -322,10 +431,13 @@ class Humanoid(Thing, Creature):
     ideal_shoulder = Joint(.4, can_attack=True, can_grasp=False)
     ideal_elbow = Joint(.2, can_attack=True, can_grasp=False)
 
+
     def __init__(self, height):
         super().__init__()
         self.head = copy.deepcopy(self.ideal_head)
+        self.head.contents = [self.ideal_skin, self.ideal_cranium, self.ideal_brain]
         self.neck = copy.deepcopy(self.ideal_neck)
+        self.neck.contents = []
         self.upper_torso = copy.deepcopy(self.ideal_upper_torso)
         self.lower_torso = copy.deepcopy(self.ideal_lower_torso)
 
@@ -488,7 +600,7 @@ class Human(Humanoid, Character):
 
 
 h = Human(2, 20, {}, {'strength': 40})
-print(h.right_palm.calc_attack_speed(1))
+print(h.right_palm.calc_slash_speed(1))
 # TODO Attacks don't come from body level but from part level - i.e. leg can attack
 # TODO if part is wielding an object use the corresponding attack method from the object
 # TODO Attacks come in: Jab Foreswing Backswing Downswing Upswing (Swing come in slap and strike)

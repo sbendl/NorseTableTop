@@ -18,7 +18,7 @@ class Sword:
     def calc_moment_of_inertia(self, extra_length=0):
         return (1 / 3) * self.mass * (self.length + extra_length) ** 2
 
-    def calc_cutting_damage(self, KE, other):
+    def calc_damage(self, KE, other):
         print("weapon:")
         volume = self.width * self.thickness * self.length
         pl = self.material.shear_plastic_limit * volume
@@ -37,14 +37,14 @@ class Sword:
         else:
             print('Deflected')
 
-    def foreswing(self, other, ang_velocity):
+    def foreswing(self, other, ang_velocity, body_len):
         cut_length = min(self.length, other.width, other.length)
-        tip_velocity = ang_velocity * (self.wielder.elbow_len + self.length)
-        bottom_velocity = ang_velocity * (self.wielder.elbow_len + (self.length * 2 / 3) - cut_length)
+        tip_velocity = ang_velocity * (body_len + self.length)
+        bottom_velocity = ang_velocity * (body_len + (self.length * 2 / 3) - cut_length)
         print(tip_velocity, bottom_velocity)
         KE_self = .5 * (self.mass / 2) * bottom_velocity ** 2
         KE_other = .5 * self.mass * tip_velocity ** 2
-        self.calc_cutting_damage(KE_self, other)
+        self.calc_damage(KE_self, other)
         other.calc_cutting_damage(KE_other, self)
 
     backswing = foreswing

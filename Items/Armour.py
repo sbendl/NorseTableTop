@@ -5,7 +5,7 @@ import numpy as np
 
 
 class Chainmail:
-    link_thickness = 1.5 / 1000
+    link_thickness = 1.7 / 1000
     link_diameter = 4 / 1000
     thickness = link_thickness * 3
     width = 500 / 1000
@@ -70,6 +70,7 @@ class Chainmail:
                         print(s * link_length)
                         KE = 0
                         break
+                KE = 0
             else:
                 print('Deflected')
 
@@ -101,11 +102,11 @@ class Breastplate:
             print('Deflected')
 
     def calc_piercing_damage(self, KE, other):
-        cut_length = min(other.width, other.thickness, self.width)
-        volume = cut_length * self.thickness * max(self.width, self.length)
+        cut_length = min(other.width, other.thickness)
+        volume = cut_length * self.thickness * self.width * self.length
         self.calc_damage(KE, volume)
 
     def calc_cutting_damage(self, KE, other):
         cut_length = min(other.length, self.width, self.length)
-        volume = cut_length * self.thickness * max(self.width, self.length)
+        volume = cut_length * self.thickness * self.width * self.length
         self.calc_damage(KE, volume)
