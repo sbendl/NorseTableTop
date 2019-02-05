@@ -33,22 +33,27 @@ class Organ(Thing):
         super().__init__()
         self.critical = critical
 
+
 class FloatingOrgan(Organ):
     def __init__(self, relative_size, **kwargs):
         super().__init__(**kwargs)
         self.relative_size = relative_size
 
+
 class Brain(FloatingOrgan, Materials.Fleshy):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
 
 class Stomach(FloatingOrgan, Materials.Fleshy):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+
 class Liver(FloatingOrgan, Materials.Fleshy):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
 
 class Intestines(FloatingOrgan, Materials.Fleshy):
     def __init__(self, **kwargs):
@@ -65,11 +70,11 @@ class Heart(FloatingOrgan, Materials.Muscle):
         super().__init__(**kwargs)
 
 
-
 class WrapperOrgan(Organ):
     def __init__(self, thickness, **kwargs):
         super().__init__(**kwargs)
         self.thickness = thickness
+
 
 class Larynx(WrapperOrgan, Materials.Fleshy):
     def __init__(self, **kwargs):
@@ -79,6 +84,7 @@ class Larynx(WrapperOrgan, Materials.Fleshy):
 class WrappingBone(WrapperOrgan, Materials.Bone):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
 
 class FloatingBone(FloatingOrgan, Materials.Bone):
     def __init__(self, **kwargs):
@@ -92,21 +98,58 @@ class SkinLayer(WrapperOrgan, Materials.Fleshy):
 
 class MuscleLayer(WrapperOrgan, Materials.Muscle):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(critical=False, **kwargs)
 
+class FloatingOrganLayer(Organ, Materials.Fleshy):
+    def __init__(self, contents, **kwargs):
+        super().__init__(critical=False, **kwargs)
+        self.contents = contents
 
 # class BodyPlan:
 #     def __init__(self):
 #         self.parts_list = []
 
+class CompoundItemLayers:
+    def __init__(self, layers):
+        self.layers = layers
+
+    def calc_damage(self, KE, volume):
+        print("armour:")
+        pl = self.shear_plastic_limit * volume
+        el = self.shear_elastic_limit * volume
+
+        print(KE, el, pl)
+
+        if KE > pl:
+            print('Pierced')
+        elif KE > el:
+            print('Bent')
+            for s in np.linspace(0, self.strain_at_fracture, 100, endpoint=False):
+                if integrate.quad(self.shear_stress_strain, 0, s)[0] * volume > KE:
+                    print(s)
+                    break
+        else:
+            print('Deflected')
+
+    def calc_cutting_damage(self, KE, other):
+        pass
+
+    def calc_piercing_damage(self, KE, other):
+        pass
+
+    def calc_crushing_damage(self, KE, other):
+        w = min(self.width, other.width)
+        l = min(self.length, other.length)
+        a = (2 * w + 2 * l) * self.thickness
+
+
 
 class BodyPart(Thing):
-    def __init__(self, parent, children, contents, layers, can_grasp, can_attack, core=False):
+    def __init__(self, parent, children, layers, can_grasp, can_attack, core=False):
         super().__init__()
         self.name = type(self).__name__
         self.parent = parent
         self.children = children
-        self.contents = contents
         self.layers = layers
         self.equipped = []
         self._can_grasp = can_grasp
@@ -207,7 +250,7 @@ class BodyPart(Thing):
 
         speed, length = self.parent.calc_slash_speed(num_joints, joints_found)
         return speed + joint_speed, length + self.length
-    
+
     def calc_jab_speed(self, num_joints, joints_found=0):
         joint_speed = 0
         if self.core:
@@ -307,9 +350,10 @@ class BodyPart(Thing):
 
 
 class Digit(BodyPart, Materials.Fleshy):
-    def __init__(self, parent=None, children=[].copy(), contents=None, opposable=False, joints=3.0, length=95.0,
+    def __init__(self, parent=None, children=None, opposable=False, joints=3.0, length=95.0,
                  width=17.0, thickness=17.0, **kwargs):
-        super().__init__(parent, children, contents, **kwargs)
+        children = children if children is not None else []
+        super().__init__(parent, children, **kwargs)
         self.num_joints = joints
         self.opposable = opposable
         self.length = length
@@ -320,9 +364,10 @@ class Digit(BodyPart, Materials.Fleshy):
 
 
 class LimbTerminus(BodyPart, Materials.Fleshy):
-    def __init__(self, parent=None, children=[].copy(), contents=None, length=96.0, width=84.0, thickness=35.0,
+    def __init__(self, parent=None, children=None, length=96.0, width=84.0, thickness=35.0,
                  **kwargs):
-        super().__init__(parent, children, contents, **kwargs)
+        children = children if children is not None else []
+        super().__init__(parent, children, **kwargs)
         self.length = length
         self.width = width
         self.thickness = thickness
@@ -331,9 +376,10 @@ class LimbTerminus(BodyPart, Materials.Fleshy):
 
 
 class LimbSegment(BodyPart, Materials.Fleshy):
-    def __init__(self, parent=None, children=[].copy(), contents=None, length=460.0, width=80.0, thickness=80.0,
+    def __init__(self, parent=None, children=None, length=460.0, width=80.0, thickness=80.0,
                  **kwargs):
-        super().__init__(parent, children, contents, **kwargs)
+        children = children if children is not None else []
+        super().__init__(parent, children, **kwargs)
         self.length = length
         self.width = width
         self.thickness = thickness
@@ -345,8 +391,9 @@ class Joint(BodyPart, Materials.Fleshy):
     def scale(self, factor):
         pass
 
-    def __init__(self, rel_strength, parent=None, children=[].copy(), contents=None, **kwargs):
-        super().__init__(parent, children, contents, **kwargs)
+    def __init__(self, rel_strength, parent=None, children=None, **kwargs):
+        super().__init__(parent, children, layers=[], **kwargs)
+        children = children if children is not None else []
         self.length = 0
         self.width = 0
         self.thickness = 0
@@ -354,9 +401,10 @@ class Joint(BodyPart, Materials.Fleshy):
 
 
 class TorsoSegment(BodyPart, Materials.Fleshy):
-    def __init__(self, parent=None, children=[].copy(), contents=None, length=300.0, width=142.0, thickness=86.0,
+    def __init__(self, parent=None, children=None, length=300.0, width=142.0, thickness=86.0,
                  **kwargs):
-        super().__init__(parent, children, contents, **kwargs)
+        children = children if children is not None else []
+        super().__init__(parent, children, **kwargs)
         self.length = length
         self.width = width
         self.thickness = thickness
@@ -365,9 +413,10 @@ class TorsoSegment(BodyPart, Materials.Fleshy):
 
 
 class Neck(BodyPart, Materials.Fleshy):
-    def __init__(self, parent=None, children=[].copy(), contents=None, length=110.0, width=113.0, thickness=113.0,
+    def __init__(self, parent=None, children=None, length=110.0, width=113.0, thickness=113.0,
                  **kwargs):
-        super().__init__(parent, children, contents, **kwargs)
+        children = children if children is not None else []
+        super().__init__(parent, children, **kwargs)
         self.length = length
         self.width = width
         self.thickness = thickness
@@ -376,9 +425,10 @@ class Neck(BodyPart, Materials.Fleshy):
 
 
 class Head(BodyPart, Materials.Fleshy):
-    def __init__(self, parent=None, children=[].copy(), contents=None, length=218.0, width=186.0, thickness=186.0,
+    def __init__(self, parent=None, children=None, length=218.0, width=186.0, thickness=186.0,
                  **kwargs):
-        super().__init__(parent, children, contents, **kwargs)
+        children = children if children is not None else []
+        super().__init__(parent, children, **kwargs)
         self.length = length
         self.width = width
         self.thickness = thickness
@@ -391,12 +441,12 @@ class Humanoid(Thing, Creature):
     num_legs = 2
     num_fingers = 5
     num_toes = 5
-    ideal_skin = SkinLayer(thickenss=1 / 11.5 / 72.5, critical=False)
+    ideal_skin = SkinLayer(thickness=1 / 11.5 / 72.5, critical=False)
     ideal_cranium = WrappingBone(thickness=1 / 11.5 / 20, critical=False)
     ideal_arm_bone = WrappingBone(thickness=1 / 11.5 / 29, critical=False)
-    ideal_hand_bone = WrappingBone(thickness=.2/11.5)
+    ideal_hand_bone = WrappingBone(thickness=.2 / 11.5, critical=False)
     ideal_leg_bone = WrappingBone(thickness=1 / 11.5 / 18, critical=False)
-    ideal_foot_bone = WrappingBone(thickness=1/11.5/20)
+    ideal_foot_bone = WrappingBone(thickness=1 / 11.5 / 20, critical=False)
     ideal_ribcage = WrappingBone(thickness=1 / 11.5 / 14.5, critical=False)
     ideal_spine = WrappingBone(thickness=1 / 11.5 / 11, critical=True)
     ideal_brain = Brain(relative_size=.9, critical=True)
@@ -407,30 +457,42 @@ class Humanoid(Thing, Creature):
     ideal_heart = Heart(relative_size=.1, critical=True)
     ideal_lung = Lung(relative_size=.4, critical=True)
 
-    ideal_head = Head(contents=[ideal_brain], layers=[ideal_skin, ideal_cranium], length=1 / 7.5, width=1 / 11.5, thickness=1 / 11.5,
+    ideal_head = Head(layers=[ideal_skin, ideal_cranium, FloatingOrganLayer(contents=[ideal_brain])], length=1 / 7.5, width=1 / 11.5,
+                      thickness=1 / 11.5,
                       can_attack=True, core=True, can_grasp=False)
-    ideal_neck = Neck(contents=[], layers=[ideal_skin, MuscleLayer(thickness=1/11.5/3), ideal_larynx, ideal_spine], length=1 / 11.5, width=1 / 11.5, thickness=1 / 11.5,can_attack=False, core=True, can_grasp=False)
-    ideal_upper_torso = TorsoSegment(contents=[ideal_lung, ideal_lung, ideal_heart], layers=[ideal_skin, MuscleLayer(thickness=1/11.5/20), ideal_ribcage, ideal_spine], length=1.5 / 7.5, width=2 / 11.5, thickness=1.25 / 11.5,can_attack=True, core=True, can_grasp=False)
+    ideal_neck = Neck(layers=[ideal_skin, MuscleLayer(thickness=1 / 11.5 / 3), ideal_larynx, ideal_spine],
+                      length=1 / 11.5, width=1 / 11.5, thickness=1 / 11.5, can_attack=False, core=True, can_grasp=False)
+    ideal_upper_torso = TorsoSegment(layers=[ideal_skin, MuscleLayer(thickness=1 / 11.5 / 20), ideal_ribcage, FloatingOrganLayer(contents=[ideal_lung, ideal_lung, ideal_heart]),
+                                             ideal_spine], length=1.5 / 7.5, width=2 / 11.5, thickness=1.25 / 11.5,
+                                     can_attack=True, core=True, can_grasp=False)
     ideal_upper_torso.name = 'Upper Torso'
-    ideal_lower_torso = TorsoSegment(contents=[ideal_intestine, ideal_liver, ideal_stomach], layers=[ideal_skin, MuscleLayer(thickness=1/11.5/15), ideal_spine], length=1.25 / 7.5, width=1.75 / 11.5, thickness=1.5 / 11.5,can_attack=False, core=True, can_grasp=False)
+    ideal_lower_torso = TorsoSegment(layers=[ideal_skin, MuscleLayer(thickness=1 / 11.5 / 15), FloatingOrganLayer(contents=[ideal_intestine, ideal_liver, ideal_stomach]), ideal_spine],
+                                     length=1.25 / 7.5, width=1.75 / 11.5, thickness=1.5 / 11.5, can_attack=False,
+                                     core=True, can_grasp=False)
     ideal_lower_torso.name = 'Lower Torso'
-    ideal_upper_leg = LimbSegment(contents=[], layers=[ideal_skin, MuscleLayer(thickness=1/11.5/2), ideal_leg_bone], length=2 / 7.5, width=1 / 11.5, thickness=1 / 11.5, can_attack=False,can_grasp=False)
-    ideal_lower_leg = LimbSegment(contents=[], layers=[ideal_skin, MuscleLayer(thickness=1/11.5/3), ideal_leg_bone], length=1.75 / 7.5, width=.5 / 11.5, thickness=.5 / 11.5,can_attack=False, can_grasp=False)
-    ideal_foot = LimbTerminus(contents=[], layers=[ideal_skin, ideal_foot_bone], length=1.5 / 11.5, width=.5 / 11.5, thickness=.4 / 11.5, can_attack=True,can_grasp=False)
-    ideal_toe = Digit(contents=[], layers=[ideal_skin, ideal_foot_bone], length=.2 / 11.5, width=.1 / 11.5, thickness=.1 / 11.5, can_attack=False,can_grasp=False)
-    ideal_upper_arm = LimbSegment(contents=None, length=2 / 11.5, width=.4 / 11.5, thickness=.4 / 11.5,
-                                  can_attack=False, can_grasp=False)
-    ideal_lower_arm = LimbSegment(contents=None, length=2 / 11.5, width=.25 / 11.5, thickness=.2 / 11.5,
-                                  can_attack=False, can_grasp=False)
-    ideal_palm = LimbTerminus(contents=None, length=.8 / 11.5, width=.8 / 11.5, thickness=.2 / 11.5, can_attack=True,
-                              can_grasp=True)
-    ideal_finger = Digit(contents=None, length=.5 / 11.5, width=.15 / 11.5, thickness=.15 / 11.5, can_attack=False,
-                         can_grasp=False)
+    ideal_upper_leg = LimbSegment(layers=[ideal_skin, MuscleLayer(thickness=1 / 11.5 / 2), ideal_leg_bone],
+                                  length=2 / 7.5, width=1 / 11.5, thickness=1 / 11.5, can_attack=False, can_grasp=False)
+    ideal_lower_leg = LimbSegment(layers=[ideal_skin, MuscleLayer(thickness=1 / 11.5 / 3), ideal_leg_bone],
+                                  length=1.75 / 7.5, width=.5 / 11.5, thickness=.5 / 11.5, can_attack=False,
+                                  can_grasp=False)
+    ideal_foot = LimbTerminus(layers=[ideal_skin, ideal_foot_bone], length=1.5 / 11.5, width=.5 / 11.5,
+                              thickness=.4 / 11.5, can_attack=True, can_grasp=False)
+    ideal_toe = Digit(layers=[ideal_skin, ideal_foot_bone], length=.2 / 11.5, width=.1 / 11.5,
+                      thickness=.1 / 11.5, can_attack=False, can_grasp=False)
+    ideal_upper_arm = LimbSegment(layers=[ideal_skin, MuscleLayer(thickness=1 / 11.5 / 3), ideal_arm_bone],
+                                  length=2 / 11.5, width=.4 / 11.5, thickness=.4 / 11.5, can_attack=False,
+                                  can_grasp=False)
+    ideal_lower_arm = LimbSegment(layers=[ideal_skin, MuscleLayer(thickness=1 / 11.5 / 4), ideal_arm_bone],
+                                  length=2 / 11.5, width=.25 / 11.5, thickness=.2 / 11.5, can_attack=False,
+                                  can_grasp=False)
+    ideal_palm = LimbTerminus(layers=[ideal_skin, ideal_hand_bone], length=.8 / 11.5, width=.8 / 11.5,
+                              thickness=.2 / 11.5, can_attack=True, can_grasp=True)
+    ideal_finger = Digit(layers=[ideal_skin, ideal_hand_bone], length=.5 / 11.5, width=.15 / 11.5,
+                         thickness=.15 / 11.5, can_attack=False, can_grasp=False)
     ideal_hip = Joint(.5, can_attack=True, can_grasp=False)
     ideal_knee = Joint(.3, can_attack=True, can_grasp=False)
     ideal_shoulder = Joint(.4, can_attack=True, can_grasp=False)
     ideal_elbow = Joint(.2, can_attack=True, can_grasp=False)
-
 
     def __init__(self, height):
         super().__init__()
