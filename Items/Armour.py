@@ -10,9 +10,12 @@ class Chainmail:
     thickness = link_thickness * 3
     width = 500 / 1000
     length = 700 / 1000
+    layer_padding = 0
 
     def __init__(self, material):
         self.material = material
+        self.min_piercing_limit = self.material.tensile_plastic_limit * 2 * math.pi * (self.link_thickness / 2) ** 2 * (self.link_diameter - self.link_thickness * 2)
+        self.min_cutting_limit = self.
 
     def calc_cutting_damage(self, KE, other):
         cut_length = min(other.length, self.width, self.length)
@@ -79,6 +82,7 @@ class Breastplate:
     thickness = 3 / 1000
     width = 500 / 1000
     length = 700 / 1000
+    layer_padding = 1 / 1000
 
     def __init__(self, material):
         self.material = material

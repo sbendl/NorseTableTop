@@ -71,6 +71,8 @@ class Heart(FloatingOrgan, Materials.Muscle):
 
 
 class WrapperOrgan(Organ):
+    layer_padding = 0
+
     def __init__(self, thickness, **kwargs):
         super().__init__(**kwargs)
         self.thickness = thickness
@@ -112,6 +114,7 @@ class FloatingOrganLayer(Organ, Materials.Fleshy):
 class CompoundItemLayers:
     def __init__(self, layers):
         self.layers = layers
+        self.min_pierce_limit = self.layers[0].shear_plastic_limit
 
     def calc_damage(self, KE, volume):
         print("armour:")
